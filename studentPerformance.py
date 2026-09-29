@@ -4,6 +4,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error, r2_score
 
 # Set publication-quality plot style
 sns.set_theme(style="whitegrid")
@@ -65,23 +68,23 @@ plt.show()
 #Separate features (X) from target y, only concerned with G3 (y)
 X = df.drop(columns=['G3']) # drops
 y = df['G3'] #G3 trying to predict it 
+X = X.drop(columns=['studytime_label'])
 
 print("\n=== FEATURES (X) ===")
 print(X.shape)
 print("\n=== TARGET (y) ===")
 print(y.shape)
 #remove label study label since i dont want giving it to model
-X = X.drop(columns=['studytime_label'])
-
+#here it was
 #Identify categorical and numerical features // dont think i need this but just to make sure im having the right features
-categorical_cols = X.select_dtypes(include=['object']).columns
+categorical_cols = X.select_dtypes(include=['object', 'string']).columns
 numerical_cols = X.select_dtypes(exclude=['object']).columns
 print("\n=== CATEGORICAL FEATURES ===")
 print(list(categorical_cols)) # may need to revisit 
 print("\n=== NUMERICAL FEATURES ===")
 print(list(numerical_cols)) # since i dropped G3 from the colum it wont show ig
 
-
+#still need to implement model-based feature importance to see which features are most important for predicting G3, but for now i will just use all the features
 #Encode categorical variables-----------
 #example school GP or MS should be 1 or 0
 preprocessor = ColumnTransformer(
@@ -90,4 +93,84 @@ preprocessor = ColumnTransformer(
     ],
     remainder='passthrough' #let the rest numerical values the same 
 )
+#splitting data set  80 percent training and 20 percent testing -----  part of Step 3---------
+X_train, X_test, y_train, y_test = train_test_split( #79 testing and 316 training samples 80/20 split
+    X,
+    y,
+    test_size=0.20,
+    random_state=42 #able to make same split again everytime i run it
+)
 
+print("\n=== TRAINING AND TESTING DATA ===")
+print("Training samples:", len(X_train))
+print("Testing samples:", len(X_test))
+
+#applying the preprocessing 
+X_train_processed = preprocessor.fit_transform(X_train) # Fit calc mean, std, etc. and transform training data
+X_test_processed = preprocessor.transform(X_test) #transform test data using the same parameters learned from training data
+
+print("\n=== PROCESSED DATA ===")
+print("Training shape:", X_train_processed.shape) 
+print("Testing shape:", X_test_processed.shape)
+
+#3 Model Training and Performance  Evaluation---------------------------
+model = RandomForestRegressor(
+    n_estimators=100, #100 decision trees in forest
+    random_state=42
+)
+#student info -> train-> encode data-> learn relationships between features and G3 -> predict G3 for new students
+model.fit(X_train_processed, y_train)
+
+print("\n=== MODEL TRAINING COMPLETE ===")
+
+#now making predictions
+y_pred = model.predict(X_test_processed)
+
+print("\n=== PREDICTIONS ===")
+print("Actual grades:   ", y_test.values[:10])
+print("Predicted grades:", y_pred[:10])
+
+#Calculating MSE adn R^2 
+mse = mean_squared_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+
+print("\n=== MODEL PERFORMANCE ===")
+print(f"Mean Squared Error (MSE): {mse:.4f}")
+print(f"R² Score: {r2:.4f}")
+
+#Model Performance Visualization: Actual vs. Predicted Grades
+plt.figure(figsize=(8, 5))
+
+plt.scatter(y_test, y_pred)
+
+# Perfect prediction line
+plt.plot(
+    [y_test.min(), y_test.max()],
+    [y_test.min(), y_test.max()],
+    linestyle='--'
+)
+
+plt.title('Actual vs. Predicted Final Grades')
+plt.xlabel('Actual Final Grade (G3)')
+plt.ylabel('Predicted Final Grade (G3)')
+
+plt.tight_layout()
+plt.savefig('fig3_actual_vs_predicted.png', dpi=300)
+plt.show()
+#importance features
+feature_names = preprocessor.get_feature_names_out()
+
+importance = model.feature_importances_
+
+feature_importance = pd.DataFrame({
+    'Feature': feature_names,
+    'Importance': importance
+})
+
+feature_importance = feature_importance.sort_values(
+    by='Importance',
+    ascending=False
+)
+
+print("\n=== TOP 10 MOST IMPORTANT FEATURES ===")
+print(feature_importance.head(10))
