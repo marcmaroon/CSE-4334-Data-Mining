@@ -24,7 +24,7 @@ summary_stats = df[numeric_cols].agg(['mean', 'median', 'std', 'min', 'max']).T
 print("=== SUMMARY STATISTICS ===")
 print(summary_stats)
 
-# Save summary stats to CSV/Excel for your presentation slides table
+# Save summary stats to CSV/Excel for presentation slides table
 summary_stats.to_csv("summary_stats_table.csv")
 
 
@@ -66,25 +66,25 @@ plt.show()
 
 #----Pre processing SECTION---------
 #Separate features (X) from target y, only concerned with G3 (y)
-X = df.drop(columns=['G3']) # drops
+X = df.drop(columns=['G3'])
 y = df['G3'] #G3 trying to predict it 
-X = X.drop(columns=['studytime_label'])
+X = X.drop(columns=['studytime_label']) #remove label study label since i dont want giving it to model
 
 print("\n=== FEATURES (X) ===")
 print(X.shape)
 print("\n=== TARGET (y) ===")
 print(y.shape)
-#remove label study label since i dont want giving it to model
-#here it was
-#Identify categorical and numerical features // dont think i need this but just to make sure im having the right features
+
+
+#listing categorical and numerical features / nice to see the features
 categorical_cols = X.select_dtypes(include=['object', 'string']).columns
 numerical_cols = X.select_dtypes(exclude=['object']).columns
 print("\n=== CATEGORICAL FEATURES ===")
-print(list(categorical_cols)) # may need to revisit 
+print(list(categorical_cols))
 print("\n=== NUMERICAL FEATURES ===")
-print(list(numerical_cols)) # since i dropped G3 from the colum it wont show ig
+print(list(numerical_cols)) 
 
-#still need to implement model-based feature importance to see which features are most important for predicting G3, but for now i will just use all the features
+
 #Encode categorical variables-----------
 #example school GP or MS should be 1 or 0
 preprocessor = ColumnTransformer(
@@ -94,11 +94,11 @@ preprocessor = ColumnTransformer(
     remainder='passthrough' #let the rest numerical values the same 
 )
 #splitting data set  80 percent training and 20 percent testing -----  part of Step 3---------
-X_train, X_test, y_train, y_test = train_test_split( #79 testing and 316 training samples 80/20 split
+X_train, X_test, y_train, y_test = train_test_split( # 79 testing and 316 training samples 80/20 split
     X,
     y,
     test_size=0.20,
-    random_state=42 #able to make same split again everytime i run it
+    random_state=42 # to be able to make same split again everytime Program runs
 )
 
 print("\n=== TRAINING AND TESTING DATA ===")
@@ -130,7 +130,7 @@ print("\n=== PREDICTIONS ===")
 print("Actual grades:   ", y_test.values[:10])
 print("Predicted grades:", y_pred[:10])
 
-#Calculating MSE adn R^2 
+#Calculating MSE and R^2 
 mse = mean_squared_error(y_test, y_pred)
 r2 = r2_score(y_test, y_pred)
 
@@ -157,7 +157,8 @@ plt.ylabel('Predicted Final Grade (G3)')
 plt.tight_layout()
 plt.savefig('fig3_actual_vs_predicted.png', dpi=300)
 plt.show()
-#importance features
+
+#getting importance features
 feature_names = preprocessor.get_feature_names_out()
 
 importance = model.feature_importances_
